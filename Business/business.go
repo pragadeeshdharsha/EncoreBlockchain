@@ -23,9 +23,9 @@ type businessInfo struct {
 func (p *program) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	args := stub.GetStringArgs()
 	fmt.Println("Converting into a list")
-	/*repaymentAcNosList := businessInfo{repaymentAcNos: strings.Split(args[1], ",")}
-	fmt.Printf("%+v", repaymentAcNosList)*/
-	acntNosBytes, _ := json.Marshal(args)
+	repaymentAcNosList := businessInfo{repaymentAcNos: strings.Split(args[1], ",")}
+	fmt.Printf("%+v", repaymentAcNosList)
+	acntNosBytes, _ := json.Marshal(args[1])
 	stub.PutState(args[0], acntNosBytes)
 	fmt.Println("Successfully stored")
 	return shim.Success(nil)
@@ -37,6 +37,9 @@ func (p *program) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if function == "addRepaymentAcNos" {
 		return p.addRepaymentAcNos(stub, args)
 	}
+	/*if function == "view" {
+		return p.view(stub, args[0])
+	}*/
 
 	return shim.Success(nil)
 }
@@ -53,6 +56,16 @@ func (p *program) addRepaymentAcNos(stub shim.ChaincodeStubInterface, args []str
 
 	return shim.Success(nil)
 }
+
+/*func (p *program) view(stub shim.ChaincodeStubInterface, args string) pb.Response {
+
+	value, _ := stub.GetState(args)
+
+	accountList := businessInfo{}
+	json.Unmarshal(value, &accountList)
+
+	return shim.Success(value)
+}*/
 
 func main() {
 	err := shim.Start(new(program))
