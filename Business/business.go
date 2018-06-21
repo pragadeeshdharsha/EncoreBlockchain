@@ -15,14 +15,14 @@ type chainCode struct {
 type businessInfo struct {
 	businessName         string
 	businessAcNo         string
-	businessLimit        string
+	businessLimit        int64
 	businessWalletID     string //Hash
 	businessLoanWalletID string
 	businessLiabilityID  string
 	maxROI               float32
 	minROI               float32
 	numberOfPrograms     int
-	businessExposure     string
+	businessExposure     int64
 }
 
 func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -31,10 +31,6 @@ func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 
 func (c *chainCode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
-
-	if len(args) != 11 {
-		return shim.Error("Invalid number of arguments")
-	}
 
 	if function == "putNewBusinessInfo" { //Inserting a New Business information
 		return putNewBusinessInfo(stub, args)
@@ -46,6 +42,14 @@ func (c *chainCode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 func putNewBusinessInfo(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
+	if len(args) != 11 {
+		return shim.Error("Invalid number of arguments. Needed 11 arguments")
+	}
+
+	businessLimitConv, err := strconv.ParseInt(args[3], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 	// CONVERTING STRING INTO 64 BIT FLOAT CONVERTION
 	maxROIconvertion, err := strconv.ParseFloat(args[7], 32)
 	if err != nil {
@@ -65,7 +69,12 @@ func putNewBusinessInfo(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	if err != nil {
 		fmt.Printf("Number of programs should be integer: %s\n", args[9])
 	}
-	newInfo := businessInfo{args[1], args[2], args[3], args[4], args[5], args[6], maxROIconvertion32, minROIconvertion32, numOfPrograms, args[10]}
+
+	businessExposureConv, err := strconv.ParseInt(args[10], 10, 64)
+	if err != nil {
+		fmt.Printf("Invalid business exposure: %s\n", args[10])
+	}
+	newInfo := &businessInfo{args[1], args[2], businessLimitConv, args[4], args[5], args[6], maxROIconvertion32, minROIconvertion32, numOfPrograms, businessExposureConv}
 	newInfoBytes, _ := json.Marshal(newInfo)
 	err = stub.PutState(args[0], newInfoBytes) // businessID = args[0]
 	if err != nil {
@@ -93,13 +102,14 @@ func getBusinessInfo(stub shim.ChaincodeStubInterface, args []string) pb.Respons
 	if err != nil {
 		return shim.Error("Unable to parse into the structure " + err.Error())
 	}
-	return shim.Success(nil)
+	jsonString := fmt.Sprintf("%+v", parsedBusinessInfo)
+	return shim.Success([]byte(jsonString))
 }
 
 func main() {
 	err := shim.Start(new(chainCode))
 	if err != nil {
-		fmt.Printf("Error starting Simple chaincode: %s", err)
+		fmt.Printf("Error starting Simple chaincode: %s\n", err)
 	}
 
 }
