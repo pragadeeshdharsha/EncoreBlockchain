@@ -13,16 +13,16 @@ type chainCode struct {
 }
 
 type businessInfo struct {
-	businessName         string
-	businessAcNo         string
-	businessLimit        int64
-	businessWalletID     string //Hash
-	businessLoanWalletID string
-	businessLiabilityID  string
-	maxROI               float32
-	minROI               float32
-	numberOfPrograms     int
-	businessExposure     int64
+	BusinessName         string
+	BusinessAcNo         string
+	BusinessLimit        int64
+	BusinessWalletID     string //Hash
+	BusinessLoanWalletID string
+	BusinessLiabilityID  string
+	MaxROI               float32
+	MinROI               float32
+	NumberOfPrograms     int
+	BusinessExposure     int64
 }
 
 func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -35,7 +35,8 @@ func (c *chainCode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if function == "putNewBusinessInfo" { //Inserting a New Business information
 		return putNewBusinessInfo(stub, args)
 	} else if function == "getBusinessInfo" { // To view a Business information
-		return getBusinessInfo(stub, args)
+		return getBusinessInfo(stub,
+			args)
 	}
 	return shim.Success(nil)
 }
@@ -50,7 +51,7 @@ func putNewBusinessInfo(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	// CONVERTING STRING INTO 64 BIT FLOAT CONVERTION
+	// CONVERTING STRING INTO 64 BIT 2 CONVERTION
 	maxROIconvertion, err := strconv.ParseFloat(args[7], 32)
 	if err != nil {
 		fmt.Printf("Invalid Maximum ROI: %s\n", args[7])
