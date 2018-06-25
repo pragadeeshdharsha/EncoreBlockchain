@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -17,15 +18,17 @@ type programInfo struct {
 	ProgramName        string
 	ProgramAnchor      string
 	ProgramType        string
-	ProgramStartDate   string // FOR NOW
-	ProgramEndDate     string //FOR NOW
+	ProgramStartDate   time.Time
+	ProgramEndDate     time.Time
 	ProgramLimit       int64
-	ProgramROI         float32
+	ProgramROI         float64
 	ProgramExposure    string
-	DiscountPercentage float32
+	DiscountPercentage float64
 	DiscountPeriod     int
 	SanctionAuthority  string
-	SanctionDate       string //FOR NOW
+	SanctionDate       time.Time
+	RepaymentAcNum     string
+	RepaymentWalletID  string //Hash
 }
 
 func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -61,7 +64,18 @@ func writeProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if !pTypes[pTypeLower] {
 		return shim.Error("Invalid program type" + pTypeLower)
 	}
-	//DO THE DATE CONVERTION HERE AND CHECK IT
+
+	//ProgramStartDate -> pSDate
+	pSDate, err := time.Parse("02/01/2006", args[4])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	//ProgramEndDate -> pEDate
+	pEDate, err := time.Parse("02/01/2006", args[5])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
 	pLimit, err := strconv.ParseInt(args[6], 10, 64)
 	if err != nil {
@@ -72,7 +86,6 @@ func writeProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if err != nil {
 		return shim.Error("Invalid Rate of Interest")
 	}
-	pROI32 := float32(pROI)
 
 	pExposure := map[string]bool{
 		"buyer":  true,
@@ -89,16 +102,19 @@ func writeProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if err != nil {
 		return shim.Error("Invalid discount percentage")
 	}
-	dPercentage32 := float32(dPercentage)
 
 	dPeriod, err := strconv.Atoi(args[10])
 	if err != nil {
 		return shim.Error("Invalid discount period")
 	}
 
-	// VALIDATE SANCTION DATE HERE
+	//SanctionDate -> sDate
+	sDate, err := time.Parse("02/01/2006", args[12])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
-	pInfo := programInfo{args[1], args[2], pTypeLower, args[4], args[5], pLimit, pROI32, pExposureLower, dPercentage32, dPeriod, args[11], args[12]}
+	pInfo := programInfo{args[1], args[2], pTypeLower, pSDate, pEDate, pLimit, pROI, pExposureLower, dPercentage, dPeriod, args[11], sDate, args[13], args[14]}
 	programInfoBytes, _ := json.Marshal(pInfo)
 	err = stub.PutState(args[0], programInfoBytes)
 	return shim.Success(nil)

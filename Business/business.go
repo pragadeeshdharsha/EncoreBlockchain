@@ -13,16 +13,16 @@ type chainCode struct {
 }
 
 type businessInfo struct {
-	BusinessName         string
-	BusinessAcNo         string
-	BusinessLimit        int64
-	BusinessWalletID     string //Hash
-	BusinessLoanWalletID string
-	BusinessLiabilityID  string
-	MaxROI               float32
-	MinROI               float32
-	NumberOfPrograms     int
-	BusinessExposure     int64
+	BusinessName              string
+	BusinessAcNo              string
+	BusinessLimit             int64
+	BusinessWalletID          string //Hash
+	BusinessLoanWalletID      string
+	BusinessLiabilityWalletID string
+	MaxROI                    float64
+	MinROI                    float64
+	NumberOfPrograms          int
+	BusinessExposure          int64
 }
 
 func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -57,14 +57,12 @@ func putNewBusinessInfo(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		fmt.Printf("Invalid Maximum ROI: %s\n", args[7])
 		return shim.Error(err.Error())
 	}
-	maxROIconvertion32 := float32(maxROIconvertion) //32 bit convertion, as ParseFloat returns 64 bit
 
 	minROIconvertion, err := strconv.ParseFloat(args[8], 32)
 	if err != nil {
 		fmt.Printf("Invalid Minimum ROI: %s\n", args[8])
 		return shim.Error(err.Error())
 	}
-	minROIconvertion32 := float32(minROIconvertion)
 
 	numOfPrograms, err := strconv.Atoi(args[9])
 	if err != nil {
@@ -75,7 +73,7 @@ func putNewBusinessInfo(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	if err != nil {
 		fmt.Printf("Invalid business exposure: %s\n", args[10])
 	}
-	newInfo := &businessInfo{args[1], args[2], businessLimitConv, args[4], args[5], args[6], maxROIconvertion32, minROIconvertion32, numOfPrograms, businessExposureConv}
+	newInfo := &businessInfo{args[1], args[2], businessLimitConv, args[4], args[5], args[6], maxROIconvertion, minROIconvertion, numOfPrograms, businessExposureConv}
 	newInfoBytes, _ := json.Marshal(newInfo)
 	err = stub.PutState(args[0], newInfoBytes) // businessID = args[0]
 	if err != nil {

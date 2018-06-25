@@ -19,7 +19,8 @@ CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypt
 peer chaincode install -n programcc -v 0 -p github.com/EncoreBlockchain/Program  
 
 
-INITIALITATION
+---------------------------INITIALITATION--------------------------------
+
 peer chaincode instantiate -o orderer.example.com:7050 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C $CHANNEL_NAME -n programcc -v 0 -c '{"Args":[]}' -P "OR ('Org1MSP.peer','Org2MSP.peer')"
 
 

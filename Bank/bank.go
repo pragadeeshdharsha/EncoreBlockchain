@@ -12,14 +12,14 @@ type chainCode struct {
 }
 
 type bankInfo struct {
-	BankName            string `json:"BankName:"`
-	BankBranch          string
-	Bankcode            string
-	BankWalletID        string
-	BankAssetWallet     string
-	BankChargesWallet   string
-	BankLiabilityWallet string
-	TDSreceivableWallet string
+	BankName              string
+	BankBranch            string
+	Bankcode              string
+	BankWalletID          string
+	BankAssetWalletID     string
+	BankChargesWalletID   string
+	BankLiabilityWalletID string
+	TDSreceivableWalletID string
 }
 
 func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
