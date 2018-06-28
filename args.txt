@@ -1,0 +1,12 @@
+Register User:
+    enrollmentID:   user1
+    role        :   client
+    mspid       :   Org1MSP
+
+Query:
+    chaincodeID :   mycc
+    fn          :   queryAllCars
+    args        :   ['']
+
+
+
