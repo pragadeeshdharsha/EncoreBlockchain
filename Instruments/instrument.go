@@ -37,14 +37,19 @@ func (c *chainCode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return enterInstrument(stub, args)
 	} else if function == "getInstrument" {
 		return getInstrument(stub, args)
+	} else if function == "getSellerID" {
+		return getSellerID(stub, args)
 	}
 
-	return shim.Success(nil)
+	return shim.Error("No function named " + function + " in Instrument")
+
 }
 
 func enterInstrument(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 11 {
-		return shim.Error("Invalid number of arguments")
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in enterInstrument (required:11) given:" + xLenStr)
+
 	}
 
 	//InstrumentDate -> instDate
@@ -73,46 +78,50 @@ func enterInstrument(stub shim.ChaincodeStubInterface, args []string) pb.Respons
 		return shim.Error("Invalid Instrument Status " + args[6])
 	}
 
-	// UNCOMMENT THIS WHILE ALL THE CHAINCODES ARE LINKED
-	// SO THAT CHECKING FOR A PROGRAM ID CAN WORK PROPERLY
-	/*
-		//Checking if the programID exist or not
-		chk, err := stub.GetState(args[2])
-		if err == nil {
-			return shim.Error("This program does not exist")
-		} else if chk == nil {
-			return shim.Error("There is no information on this program")
-		}
-	*/
-
 	//InsDueDate -> insDate
-	insDate, err := time.Parse("02/01/2006", args[7])
+	insDueDate, err := time.Parse("02/01/2006", args[7])
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	//Converting the incoming date from Dd/mm/yy:hh:mm:ss to Dd/mm/yyThh:mm:ss for parsing
+	//Checking if the programID exist or not
+	//commented just for testing
+	/*chk, err := stub.GetState(args[8])
+	if chk == nil {
+		return shim.Error("There is no program in this ID (checked from instrument)" + args[8])
+	}*/
 
-	vString := args[10][:8] + "T" + args[10][9:] //removing the ":" part from the string
+	//Converting the incoming date from Dd/mm/yy:hh:mm:ss to Dd/mm/yyThh:mm:ss for parsing
+	vString := args[10][:10] + "T" + args[10][11:] //removing the ":" part from the string
 
 	//ValueDate -> vDate
 	vDate, err := time.Parse("02/01/2006T15:04:05", vString)
 	if err != nil {
-		return shim.Error(err.Error())
+		return shim.Error("error in parsing the date and time (instrument)" + err.Error())
 	}
 
-	inst := instrumentInfo{args[1], instDate, args[3], args[4], insAmt, insStatusValuesLower, insDate, args[8], args[9], vDate}
+	inst := instrumentInfo{args[1], instDate, args[3], args[4], insAmt, insStatusValuesLower, insDueDate, args[8], args[9], vDate}
 	instBytes, err := json.Marshal(inst)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 	stub.PutState(args[0], instBytes)
+
+	indexName := "instRefNo~sellBusID"
+	refNoBusIDkey, err := stub.CreateCompositeKey(indexName, []string{inst.InstrumentRefNo, inst.SellBusinessID})
+	if err != nil {
+		return shim.Error("Unable to create instRefNo~sellBusID composite key:" + err.Error())
+	}
+	value := []byte{0x00}
+	stub.PutState(refNoBusIDkey, value)
 	return shim.Success(nil)
 }
 
 func getInstrument(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
-		return shim.Error("Invalid number of arguments")
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in getInstrument (required:1) given:" + xLenStr)
+
 	}
 
 	insBytes, err := stub.GetState(args[0])
@@ -128,9 +137,36 @@ func getInstrument(stub shim.ChaincodeStubInterface, args []string) pb.Response 
 	return shim.Success([]byte(insString))
 }
 
+func getSellerID(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	if len(args) != 1 {
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in getSellerID(instrument) (required:1) given: " + xLenStr)
+	}
+
+	instID := args[0]
+	instRefNoSellIDiterator, err := stub.GetStateByPartialCompositeKey("instRefNo~sellBusID", []string{instID})
+	if err != nil {
+		return shim.Error("Unable to get the result for composite key : instRefNo~sellBusID")
+	}
+	var busID string
+	for i := 0; instRefNoSellIDiterator.HasNext(); i++ {
+		instRefNoSellIData, err := instRefNoSellIDiterator.Next()
+		if err != nil {
+			return shim.Error("Unable to iterate instRefNoSellIDiterator:" + err.Error())
+		}
+		_, requiredArgs, err := stub.SplitCompositeKey(instRefNoSellIData.Key)
+		if err != nil {
+			return shim.Error("error spliting the composite key instRefNoSellIDiterator:" + err.Error())
+		}
+		busID = requiredArgs[1]
+	}
+	return shim.Success([]byte(busID))
+}
+
 func main() {
 	err := shim.Start(new(chainCode))
 	if err != nil {
-		fmt.Println("Unable to start the chaincode")
+		fmt.Printf("Error starting Instrument chaincode: %s\n", err)
 	}
 }

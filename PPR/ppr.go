@@ -38,12 +38,13 @@ func (c *chainCode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "seePPR" {
 		return seePPR(stub, args)
 	}
-	return shim.Success(nil)
+	return shim.Error("No function named " + function + " in PPR")
 }
 
 func createPPR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 10 {
-		return shim.Error("Invalid number of arguments")
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in createPPR (required:10) given:" + xLenStr)
 	}
 
 	relationship := map[string]bool{
@@ -96,7 +97,8 @@ func createPPR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 func seePPR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
-		return shim.Error("Invalid number of arguments")
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in seePPR (required:1) given:" + xLenStr)
 	}
 
 	pprObject := pprInfo{}
@@ -115,6 +117,6 @@ func seePPR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 func main() {
 	err := shim.Start(new(chainCode))
 	if err != nil {
-		fmt.Println("Unable to start the chaincode")
+		fmt.Printf("Error starting PPR chaincode: %s\n", err)
 	}
 }

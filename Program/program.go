@@ -28,7 +28,7 @@ type programInfo struct {
 	SanctionAuthority  string
 	SanctionDate       time.Time
 	RepaymentAcNum     string
-	RepaymentWalletID  string //Hash
+	RepaymentWalletID  string
 }
 
 func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -43,12 +43,13 @@ func (c *chainCode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "getProgram" {
 		return getProgram(stub, args)
 	}
-	return shim.Success(nil)
+	return shim.Error("No function named " + function + " in Program")
 }
 
 func writeProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 13 {
-		return shim.Error("Invalid number of arguments")
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in writeProgram (required:13) given:" + xLenStr)
 	}
 
 	//args[0] -> programID ; Key for the structure, must be passed by the user
@@ -84,7 +85,7 @@ func writeProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	pROI, err := strconv.ParseFloat(args[7], 32)
 	if err != nil {
-		return shim.Error("Invalid Rate of Interest")
+		return shim.Error("Invalid Rate of Interest in writeProgram")
 	}
 
 	pExposure := map[string]bool{
@@ -123,7 +124,8 @@ func writeProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 func getProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	if len(args) != 1 {
-		return shim.Error("Invalid number of arguments")
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in getProgram (required:1) given:" + xLenStr)
 	}
 
 	pInfo := programInfo{}
@@ -149,6 +151,6 @@ func getProgram(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 func main() {
 	err := shim.Start(new(chainCode))
 	if err != nil {
-		fmt.Println("Unable to initiate the chaincode")
+		fmt.Printf("Error starting Program chaincode: %s\n", err)
 	}
 }

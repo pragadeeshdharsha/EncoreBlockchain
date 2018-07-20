@@ -15,15 +15,15 @@ type chainCode struct {
 }
 
 type transactionInfo struct {
-	TxnType string
-	TxnDate time.Time
-	LoanID  string
-	InsID   string
-	Amt     int64
-	FromID  string
-	ToID    string
-	By      string
-	PprID   string
+	TxnType string    //args[1]
+	TxnDate time.Time //args[2]
+	LoanID  string    //args[3]
+	InsID   string    //args[4]
+	Amt     int64     //args[5]
+	FromID  string    //args[6]
+	ToID    string    //args[7]
+	By      string    //args[8]
+	PprID   string    //args[9]
 }
 
 func (c *chainCode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -42,12 +42,14 @@ func (c *chainCode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 func newTxnInfo(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 9 {
-		return shim.Error("Invalid number of arguments")
+	if len(args) != 10 {
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in newTxnInfo(transactions) (required:10) given: " + xLenStr)
 	}
 
 	tTypeValues := map[string]bool{
 		"disbursement": true,
+		"repayment":    true,
 		"collection":   true,
 		"refund":       true,
 	}
@@ -69,37 +71,91 @@ func newTxnInfo(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 		return shim.Error(err.Error())
 	}
 
-	transaction := transactionInfo{tTypeLower, tDate, args[3], args[4], amt, args[6], args[7], args[8], args[9]}
-	txnBytes, err := json.Marshal(transaction)
-	err = stub.PutState(args[0], txnBytes)
+	//TODO: put it at last for redability
+
+	switch tTypeLower {
+
+	case "disbursement":
+		argsStr := strings.Join(args, ",")
+		chaincodeArgs := toChaincodeArgs("newDisbInfo", argsStr)
+		fmt.Println("calling the disbursement chaincode")
+		response := stub.InvokeChaincode("disbursementcc", chaincodeArgs, "myc")
+		if response.Status != shim.OK {
+			return shim.Error(response.Message)
+		}
+		transaction := transactionInfo{tTypeLower, tDate, args[3], args[4], amt, args[6], args[7], args[8], args[9]}
+		fmt.Println(transaction)
+
+		txnBytes, err := json.Marshal(transaction)
+		err = stub.PutState(args[0], txnBytes)
+		if err != nil {
+			return shim.Error("Cannot write into ledger the transactino details")
+		} else {
+			fmt.Println("Successfully inserted disbursement transaction into the ledger")
+		}
+		//chaincodeArgs = toChaincodeArgs("updateLoanBal",)
+
+	case "repayment":
+		argsStr := strings.Join(args, ",")
+		chaincodeArgs := toChaincodeArgs("newRepayInfo", argsStr)
+		fmt.Println("calling the repayment chaincode")
+		response := stub.InvokeChaincode("repaycc", chaincodeArgs, "myc")
+		if response.Status != shim.OK {
+			return shim.Error(response.Message)
+		}
+		transaction := transactionInfo{tTypeLower, tDate, args[3], args[4], amt, args[6], args[7], args[8], args[9]}
+		fmt.Println(transaction)
+		txnBytes, err := json.Marshal(transaction)
+		err = stub.PutState(args[0], txnBytes)
+		if err != nil {
+			return shim.Error("Cannot write into ledger the transaction details")
+		} else {
+			fmt.Println("Successfully inserted repayment transaction into the ledger")
+		}
+
+	default:
+		fmt.Println("incorrect txnType")
+		return shim.Error("incorrect txnType from txncc")
+	}
+
 	return shim.Success(nil)
 }
 
 func getTxnInfo(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
-		return shim.Error("Invalid number of arguments")
+		xLenStr := strconv.Itoa(len(args))
+		return shim.Error("Invalid number of arguments in getTxnInfo (required:1) given: " + xLenStr)
 	}
 
 	txnBytes, err := stub.GetState(args[0])
 	if err != nil {
 		return shim.Error(err.Error())
 	} else if txnBytes == nil {
-		return shim.Error("No data exists on this loanID: " + args[0])
+		return shim.Error("No data exists on this txnID: " + args[0])
 	}
 
 	transaction := transactionInfo{}
-	err = json.Unmarshal(txnBytes, transaction)
+	err = json.Unmarshal(txnBytes, &transaction)
 	if err != nil {
-		return shim.Error(err.Error())
+		return shim.Error("error while unmarshaling:" + err.Error())
 	}
 
 	tString := fmt.Sprintf("%+v", transaction)
 	return shim.Success([]byte(tString))
 
 }
+
+func toChaincodeArgs(args ...string) [][]byte {
+	bargs := make([][]byte, len(args))
+	for i, arg := range args {
+		bargs[i] = []byte(arg)
+	}
+	return bargs
+}
+
 func main() {
 	err := shim.Start(new(chainCode))
 	if err != nil {
-		fmt.Println("Unable to start the chaincode")
+		fmt.Printf("Error starting Transaction chaincode: %s\n", err)
 	}
 }
